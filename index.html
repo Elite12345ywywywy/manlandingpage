@@ -743,8 +743,20 @@ body{
     </a>
 
 
-    <div class="auto-open" id="autoOpenStatus" role="status" aria-live="polite">
-        ✦ auto open in <span class="timer" id="redirectCountdown">30</span>s
+    <div class="auto-open">
+
+        Auto-open in
+
+        <span class="pause">
+            Ⅱ
+        </span>
+
+        <span
+        id="timer"
+        class="timer">
+            30s
+        </span>
+
     </div>
 
 </div>
@@ -900,60 +912,117 @@ body{
 <script>
 
 /* ==========================================
-   TELEGRAM LINK + VISIBLE AUTO-REDIRECT TIMER
+   SETTINGS
 ========================================== */
 
-const TELEGRAM_URL = "https://t.me/+ST1mS5NxLk9kNjll";
-const telegramButton = document.getElementById("telegramButton");
-const redirectCountdown = document.getElementById("redirectCountdown");
-const autoOpenStatus = document.getElementById("autoOpenStatus");
-const REDIRECT_DELAY_SECONDS = 30;
-let secondsLeft = REDIRECT_DELAY_SECONDS;
-let redirectTimer = null;
+const TELEGRAM_URL =
+"https://t.me/+ST1mS5NxLk9kNjll";
 
-if (telegramButton) {
-    telegramButton.href = TELEGRAM_URL;
-    telegramButton.target = "_blank";
-    telegramButton.rel = "noopener noreferrer";
+/*
+ * KEEP YOUR OWN TIMER VALUE HERE.
+ * You said you will change it yourself.
+ */
+const COUNTDOWN_SECONDS = 3;
 
-    telegramButton.addEventListener("click", function (event) {
-        // Ignore script-generated clicks; only a real user action can count as Subscribe.
-        if (!event.isTrusted) {
-            return;
-        }
 
-        // Manual join takes priority: stop the countdown to avoid a second redirect.
-        if (redirectTimer !== null) {
-            window.clearInterval(redirectTimer);
-            redirectTimer = null;
-        }
-        if (autoOpenStatus) {
-            autoOpenStatus.textContent = "✓ Telegram link selected";
-        }
+/* ==========================================
+   TELEGRAM CLICK TRACKING
+========================================== */
 
-        // The Pixel is initialized in <head>; track the genuine button interaction once.
-        if (typeof window.fbq === "function") {
-            window.fbq("track", "Subscribe");
-        }
-    });
+let subscribeTracked = false;
+
+const telegramButton =
+document.getElementById("telegramButton");
+
+let countdown;
+
+telegramButton.addEventListener(
+"click",
+function(){
+
+    /*
+     * Subscribe fires ONLY when
+     * the user manually clicks
+     * JOIN TELEGRAM.
+     */
+
+    if(
+        !subscribeTracked &&
+        typeof window.fbq === "function"
+    ){
+
+        subscribeTracked = true;
+
+        fbq(
+            "track",
+            "Subscribe"
+        );
+
+    }
+
+    /*
+     * Stop auto redirect after
+     * manual button click.
+     */
+
+    clearInterval(countdown);
+
+});
+
+
+/* ==========================================
+   AUTO REDIRECT COUNTDOWN
+========================================== */
+
+let remaining =
+COUNTDOWN_SECONDS;
+
+const timer =
+document.getElementById("timer");
+
+
+function updateTimer(){
+
+    timer.textContent =
+    String(remaining).padStart(2,"0") + "s";
+
 }
 
-if (redirectCountdown && autoOpenStatus) {
-    redirectCountdown.textContent = String(secondsLeft);
-    redirectTimer = window.setInterval(function () {
-        secondsLeft -= 1;
-        if (redirectCountdown) {
-            redirectCountdown.textContent = String(Math.max(secondsLeft, 0));
-        }
-        if (secondsLeft <= 0) {
-            window.clearInterval(redirectTimer);
-            redirectTimer = null;
-            autoOpenStatus.textContent = "Opening Telegram…";
-            // Same-tab navigation; some in-app browsers may still restrict it.
-            window.location.assign(TELEGRAM_URL);
-        }
-    }, 1000);
-}
+updateTimer();
+
+
+countdown =
+setInterval(
+function(){
+
+    remaining--;
+
+    if(remaining <= 0){
+
+        clearInterval(countdown);
+
+        timer.textContent="00s";
+
+        /*
+         * IMPORTANT:
+         *
+         * No Subscribe event here.
+         *
+         * Automatic redirect does NOT
+         * count as a Subscribe click.
+         */
+
+        window.location.href =
+        TELEGRAM_URL;
+
+        return;
+    }
+
+    updateTimer();
+
+},
+1000
+);
 
 
 /* ==========================================
